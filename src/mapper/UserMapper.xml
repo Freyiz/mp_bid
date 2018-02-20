@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="dao.UserDao">
+	<resultMap id="BaseResultMap" type="pojo.User">
+		<id column="id_user" jdbcType="DECIMAL" property="id_user" />
+		<result column="role" jdbcType="VARCHAR" property="role" />
+		<result column="username" jdbcType="VARCHAR" property="username" />
+		<result column="password" jdbcType="VARCHAR" property="password" />
+		<result column="org" jdbcType="OTHER" property="org" />
+		<result column="tel" jdbcType="DECIMAL" property="tel" />
+		<result column="email" jdbcType="VARCHAR" property="email" />
+		<result column="user_stamp" jdbcType="TIMESTAMP" property="user_stamp" />
+		<result column="confirm" jdbcType="DECIMAL" property="confirm" />
+		<result column="follow" jdbcType="VARCHAR" property="follow" />
+	</resultMap>
+
+	<insert id="insertSelective" parameterType="pojo.User">
+		insert into mp_user
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id_user != null and id_user != ''">
+				id_user,
+			</if>
+			<if test="role != null and role != ''">
+				role,
+			</if>
+			<if test="username != null and username != ''">
+				username,
+			</if>
+			<if test="password != null and password != ''">
+				password,
+			</if>
+			<if test="org != null and org != ''">
+				org,
+			</if>
+			<if test="tel != null and tel != ''">
+				tel,
+			</if>
+			<if test="email != null and email != ''">
+				email,
+			</if>
+			<if test="user_stamp != null and user_stamp != ''">
+				user_stamp,
+			</if>
+			<if test="confirm != null and confirm != ''">
+				confirm,
+			</if>
+			<if test="follow != null and follow != ''">
+				follow,
+			</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id_user != null and id_user != ''">
+				#{id_user,jdbcType=DECIMAL},
+			</if>
+			<if test="role != null and role != ''">
+				#{role,jdbcType=VARCHAR},
+			</if>
+			<if test="username != null and username != ''">
+				#{username,jdbcType=VARCHAR},
+			</if>
+			<if test="password != null and password != ''">
+				#{password,jdbcType=VARCHAR},
+			</if>
+			<if test="org != null and org != ''">
+				#{org,jdbcType=OTHER},
+			</if>
+			<if test="tel != null and tel != ''">
+				#{tel,jdbcType=DECIMAL},
+			</if>
+			<if test="email != null and email != ''">
+				#{email,jdbcType=VARCHAR},
+			</if>
+			<if test="user_stamp != null and user_stamp != ''">
+				#{user_stamp,jdbcType=TIMESTAMP},
+			</if>
+			<if test="confirm != null and confirm != ''">
+				#{confirm,jdbcType=DECIMAL},
+			</if>
+			<if test="follow != null and follow != ''">
+				#{follow,jdbcType=VARCHAR},
+			</if>
+		</trim>
+	</insert>
+
+	<delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
+		delete from
+		mp_user
+		where id_user = #{id_user,jdbcType=DECIMAL}
+	</delete>
+
+	<select id="selectByPrimaryKey" parameterType="java.lang.Long"
+		resultMap="BaseResultMap">
+		select * from mp_user
+		where id_user =
+		#{id_user,jdbcType=DECIMAL}
+	</select>
+
+	<!-- <select id="selectForLogin" parameterType="pojo.User" resultMap="BaseResultMap">
+		select * from mp_user
+		where username = #{username,jdbcType=VARCHAR}
+		and
+		password = #{password,jdbcType=VARCHAR}
+		and 
+		role = #{role,jdbcType=VARCHAR}
+	</select> -->
+	
+	 <select id="selectUserByUsername" parameterType="String" resultMap="BaseResultMap">
+        select * from mp_user 
+        where username=#{username,jdbcType=VARCHAR}
+    </select>
+    
+    <select id="selectRoleByUsername" parameterType="String" resultMap="BaseResultMap">
+        select role from mp_user
+        where username=#{username,jdbcType=VARCHAR}
+    </select>
+	
+
+	<select id="selectPrecise" parameterType="pojo.User" resultMap="BaseResultMap">
+		select * from mp_user
+		where 1=1
+		<if test="id_user != null and id_user != ''">
+			and id_user = #{id_user,jdbcType=DECIMAL}
+		</if>
+		<if test="role != null and role != ''">
+			and role = #{role,jdbcType=VARCHAR}
+		</if>
+		<if test="username != null and username != ''">
+			and username = #{username,jdbcType=VARCHAR}
+		</if>
+		<if test="password != null and password != ''">
+			and password = #{password,jdbcType=VARCHAR}
+		</if>
+		<if test="org != null and org != ''">
+			and org = #{org,jdbcType=OTHER}
+		</if>
+		<if test="tel != null and tel != ''">
+			and tel = #{tel,jdbcType=DECIMAL}
+		</if>
+		<if test="email != null and email != ''">
+			and email = #{email,jdbcType=VARCHAR}
+		</if>
+		<if test="user_stamp != null and user_stamp != ''">
+			and user_stamp = #{user_stamp,jdbcType=TIMESTAMP}
+		</if>
+		<if test="confirm != null and confirm != ''">
+			and confirm = #{confirm,jdbcType=DECIMAL}
+		</if>
+		<if test="follow != null and follow != ''">
+			and follow = #{follow,jdbcType=VARCHAR}
+		</if>
+	</select>
+
+	<select id="selectFuzzy" parameterType="pojo.User" resultMap="BaseResultMap">
+		select * from mp_user
+		where 1=1
+		<if test="id_user != null and id_user != ''">
+			and id_user like '%'||#{id_user,jdbcType=DECIMAL}||'%'
+		</if>
+		<if test="role != null and role != ''">
+			and role like '%'||#{role,jdbcType=VARCHAR}||'%'
+		</if>
+		<if test="username != null and username != ''">
+			and username like '%'||#{username,jdbcType=VARCHAR}||'%'
+		</if>
+		<if test="password != null and password != ''">
+			and password like '%'||#{password,jdbcType=VARCHAR}||'%'
+		</if>
+		<if test="org != null and org != ''">
+			and org like '%'||#{org,jdbcType=OTHER}||'%'
+		</if>
+		<if test="tel != null and tel != ''">
+			and tel like '%'||#{tel,jdbcType=DECIMAL}||'%'
+		</if>
+		<if test="email != null and email != ''">
+			and email like '%'||#{email,jdbcType=VARCHAR}||'%'
+		</if>
+		<if test="user_stamp != null and user_stamp != ''">
+			and user_stamp like '%'||#{user_stamp,jdbcType=TIMESTAMP}||'%'
+		</if>
+		<if test="confirm != null and confirm != ''">
+			and confirm like '%'||#{confirm,jdbcType=DECIMAL}||'%'
+		</if>
+		<if test="follow != null and follow != ''">
+			and follow like '%'||#{follow,jdbcType=VARCHAR}||'%'
+		</if>
+	</select>
+
+	<update id="updateSelective" parameterType="pojo.User">
+		update mp_user
+		<set>
+			<if test="id_user != null and id_user != ''">
+				id_user = #{id_user,jdbcType=DECIMAL},
+			</if>
+			<if test="role != null and role != ''">
+				role = #{role,jdbcType=VARCHAR},
+			</if>
+			<if test="username != null and username != ''">
+				username = #{username,jdbcType=VARCHAR},
+			</if>
+			<if test="password != null and password != ''">
+				password = #{password,jdbcType=VARCHAR},
+			</if>
+			<if test="org != null and org != ''">
+				org = #{org,jdbcType=OTHER},
+			</if>
+			<if test="tel != null and tel != ''">
+				tel = #{tel,jdbcType=DECIMAL},
+			</if>
+			<if test="email != null and email != ''">
+				email = #{email,jdbcType=VARCHAR},
+			</if>
+			<if test="user_stamp != null and user_stamp != ''">
+				user_stamp = #{user_stamp,jdbcType=TIMESTAMP},
+			</if>
+			<if test="confirm != null">
+				confirm = #{confirm,jdbcType=DECIMAL},
+			</if>
+			<if test="follow != null and follow != ''">
+				follow = #{follow,jdbcType=VARCHAR},
+			</if>
+		</set>
+		where id_user = #{id_user,jdbcType=DECIMAL}
+	</update>
+	
+	<select id="selectUserCount" resultType="int">
+		select count(id_user) from mp_user
+	</select>
+	
+	<sql id="pagination_clause_head">
+		select b.r row_num, b.id_user, b.role, b.username,
+		b.password, b.org, b.tel, b.email,
+		b.user_stamp, b.confirm from
+		(select a.*,rownum r from (
+	</sql>
+	<sql id="selectColumn">
+		select u.id_user, u.role, u.username, u.password,
+		u.org, u.tel, u.email, u.user_stamp, u.confirm
+	</sql>
+	<sql id="from_where">
+		from mp_user u where 1=1
+	</sql>
+	<sql id="pagination_clause_foot">
+		) a) b
+		where b.r &gt;= #{start}
+		and b.r &lt;= #{end}
+	</sql>
+	
+	<select id="getUserList" resultMap="BaseResultMap">
+		<include refid="pagination_clause_head"></include>
+		<include refid="selectColumn"></include>
+		<include refid="from_where"></include>
+		<include refid="pagination_clause_foot"></include>
+	</select>
+</mapper>

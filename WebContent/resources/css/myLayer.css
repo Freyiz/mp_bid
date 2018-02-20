@@ -1,0 +1,20 @@
+.myLayer-shadow {
+	top: 0;
+    height: 100vh;
+    position: absolute;
+    background-color: rgba(175, 206, 202, 0.1);
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.myLayer-msg {
+	width: 200px;
+	height: 60px;
+	background-color: rgba(202, 8, 8, 0.62);
+	border-radius: 4px;
+	color: white;
+	display: flex;
+    align-items: center;
+    justify-content: center;
+}

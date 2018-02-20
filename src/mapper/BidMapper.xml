@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="dao.BidDao">
+ 	<!-- 获得当前用户出价 ，且出价时间为当前拍卖周期-->
+	<sql id="curr_user_price">
+		select bid_price
+		from mp_bid
+		where id_user = #{param.id_user,jdbcType=DECIMAL}
+		and id_veh=v.id_veh
+		and bid_stamp &gt;= v.start_bid_time
+		and bid_stamp &lt; v.expir_bid_time
+	</sql>
+	
+ 	<!-- 判断当前用户是否关注了车辆 -->
+	<sql id="curr_user_follow">
+		select '1'
+		from mp_user u
+		where u.id_user = #{param.id_user,jdbcType=DECIMAL}
+		and u.follow like '% '||v.id_veh||' %'
+	</sql>	
+		
+ 	<!-- 选择指定字段-->
+	<sql id="selectColumn">
+		select v.id_veh, v.brand, v.brand_model, v.start_price, v.curr_price
+		,(<include refid="curr_user_price"></include>) curr_user_price
+		,floor((cast(v.expir_bid_time as date)-sysdate)*24*60) remaining_time
+		,(<include refid="curr_user_follow"></include>) curr_user_follow
+	</sql>
+	
+	<!-- 查询拍卖中车辆 -->
+	<sql id="from_where">
+		from mp_veh v
+		where sysdate &gt;= v.start_bid_time
+		and sysdate &lt; v.expir_bid_time	
+	</sql>
+	
+ 	<!-- 精确匹配或模糊匹配if从句 -->
+	<sql id="if_clause_choose">
+		<choose>
+			<when test="mode == 'precise'">
+				<if test="param.brand != null and param.brand != ''">
+					and v.brand = #{param.brand,jdbcType=VARCHAR}
+				</if>
+				<if test="param.brand_model != null and param.brand_model != ''">
+					and v.brand_model = #{param.brand_model,jdbcType=VARCHAR}
+				</if>
+			</when>
+			<otherwise>
+				<if test="param.brand != null and param.brand != ''">
+					and v.brand like '%'||#{param.brand,jdbcType=VARCHAR}||'%'
+				</if>
+				<if test="param.brand_model != null and param.brand_model != ''">
+					and v.brand_model like '%'||#{param.brand_model,jdbcType=VARCHAR}||'%'
+				</if>
+			</otherwise>
+		</choose>
+	</sql>
+	
+ 	<!-- 通用if从句 -->
+	<sql id="if_clause_common">
+		<if test="param.lowest_price != null and param.lowest_price != ''">
+			and v.curr_price &gt;= #{param.lowest_price,jdbcType=DECIMAL}
+		</if>
+		<if test="param.highest_price != null and param.highest_price != ''">
+			and v.curr_price &lt;= #{param.highest_price,jdbcType=DECIMAL}
+		</if>
+		<if test="param.remaining_time != null and param.remaining_time != ''">
+			and floor((cast(v.expir_bid_time as date)-sysdate)*24*60) &lt;
+			#{param.remaining_time,jdbcType=VARCHAR}
+		</if>
+	</sql>	
+	
+	<sql id="if_clause">
+		<include refid="if_clause_choose"></include>
+		<include refid="if_clause_common"></include>	
+	</sql>
+	
+	<sql id="pagination_clause_head">
+		select b.r row_num, b.id_veh, b.brand, b.brand_model, 
+		b.start_price, b.curr_price, b.curr_user_price, 
+		b.remaining_time, b.curr_user_follow from
+		(select a.*,rownum r from (	
+	</sql>
+	
+	<sql id="pagination_clause_foot">
+		) a) b
+		where b.r &gt;= #{start}
+		and b.r &lt;= #{end}	
+	</sql>
+	
+ 	<!-- 查询拍卖中车辆 -->
+	<select id="selectVehicleInBidding" resultType="pojo.VehicleInBidding">
+		<include refid="pagination_clause_head"></include>
+		<include refid="selectColumn"></include>
+		<include refid="from_where"></include>
+		<include refid="if_clause"></include>
+		<include refid="pagination_clause_foot"></include>
+	</select>
+	<select id="selectVehicleInBiddingCount" resultType="int">
+		select count(*)
+		<include refid="from_where"></include>
+		<include refid="if_clause"></include>
+	</select>
+	
+ 	<!-- 查询用户竞拍中的车辆 -->
+	<sql id="selectUserBiddingFWI">
+		<include refid="from_where"></include>
+		and exists(<include refid="curr_user_price"></include>)	
+		<include refid="if_clause"></include>	
+	</sql>
+	<select id="selectUserBidding" resultType="pojo.VehicleInBidding">
+		<include refid="pagination_clause_head"></include>
+		<include refid="selectColumn"></include>
+		<include refid="selectUserBiddingFWI"></include>
+		<include refid="pagination_clause_foot"></include>
+	</select>
+	<select id="selectUserBiddingCount" resultType="int">
+		select count(*)
+		<include refid="selectUserBiddingFWI"></include>
+	</select>
+	
+	<!-- 返回车辆详细状态 -->
+	<sql id="selectVehStateDetailAsColumn">
+		case
+          when v.start_bid_time is null or v.expir_bid_time is null or
+               v.expir_pay_time is null or v.start_price is null or
+               v.curr_price is null then
+           '新入库'
+          when sysdate &lt; v.start_bid_time then
+           '预拍'
+          when sysdate &gt;= v.start_bid_time and
+               sysdate &lt; v.expir_bid_time then
+           '拍卖中'
+          when sysdate &gt;= v.expir_bid_time and
+               v.curr_price = v.start_price and v.veh_state = 0 then
+           '拍卖到期'
+          when sysdate &gt;= v.expir_bid_time and
+               sysdate &lt; v.expir_pay_time and
+               v.curr_price &gt; v.start_price and v.veh_state = 0 then
+           '待付款'
+          when sysdate &gt;= v.expir_pay_time and
+               v.curr_price &gt; v.start_price and v.veh_state = 0 then
+           '付款到期'
+          when sysdate &gt;= v.expir_bid_time and
+               v.curr_price &gt; v.start_price and v.veh_state = 1 then
+           '已付款'
+          when sysdate &gt;= v.expir_bid_time and
+               v.curr_price &gt; v.start_price and v.veh_state = 2 then
+           '已交车'
+          else
+           '未知'
+        end veh_state_detail
+	</sql>
+	
+ 	<!-- 查询用户关注的车辆，curr_user_follow返回常量即可，所以没有引用selectColumn -->
+	<sql id="selectUserFollowingFWI">
+		from mp_veh v 
+		where exists(<include refid="curr_user_follow"></include>)
+		<include refid="if_clause"></include>
+	</sql>
+	<select id="selectUserFollowing" resultType="pojo.VehicleInBidding">
+		select b.r row_num, b.id_veh, b.brand, b.brand_model, 
+		b.start_price, b.curr_price, b.curr_user_price, 
+		b.remaining_time, b.curr_user_follow, b.veh_state_detail from
+		(select a.*,rownum r from (	
+		select v.id_veh, v.brand, v.brand_model, v.start_price, v.curr_price
+		,(<include refid="curr_user_price"></include>) curr_user_price
+		,floor((cast(v.expir_bid_time as date)-sysdate)*24*60) remaining_time
+		,'1' curr_user_follow,
+		<include refid="selectVehStateDetailAsColumn"></include>
+		<include refid="selectUserFollowingFWI"></include>
+		<include refid="pagination_clause_foot"></include>
+	</select>
+	<select id="selectUserFollowingCount" resultType="int">
+		select count(*)
+		<include refid="selectUserFollowingFWI"></include>
+	</select>
+	
+ 	<!-- 查询用户中标车辆-->
+	<sql id="selectUserBidSuccessFWI">
+		from mp_veh v,mp_bid b0
+	    where b0.id_user = #{param.id_user,jdbcType=DECIMAL}
+	    and b0.id_veh = v.id_veh
+	    and b0.bid_price = v.curr_price
+	    and sysdate &gt;= v.expir_bid_time
+		<include refid="if_clause_choose"></include>
+		<if test="param.lowest_price != null and param.lowest_price != ''">
+			and v.curr_price &gt;= #{param.lowest_price,jdbcType=DECIMAL}
+		</if>
+		<if test="param.highest_price != null and param.highest_price != ''">
+			and v.curr_price &lt;= #{param.highest_price,jdbcType=DECIMAL}
+		</if>
+ 		<!-- 此处为expir_pay_time，所以没有引用if_clause -->
+		<if test="param.remaining_time != null and param.remaining_time != ''">
+			and floor((cast(v.expir_pay_time as date)-sysdate)*24*60) &lt;
+			#{param.remaining_time,jdbcType=VARCHAR}
+		</if>
+	</sql>
+	<select id="selectUserBidSuccess" resultType="pojo.VehicleInBidding">
+		select b.r row_num, b.id_veh, b.brand, b.brand_model, 
+		b.start_price, b.curr_price, b.expir_bid_time, 
+		b.remaining_time, b.veh_state_detail from
+		(select a.*,rownum r from (	
+	    select v.id_veh, v.brand, v.brand_model, v.start_price, v.curr_price
+		,v.expir_bid_time
+		,floor((cast(v.expir_pay_time as date)-sysdate)*24*60) remaining_time
+		,<include refid="selectVehStateDetailAsColumn"></include>
+		<include refid="selectUserBidSuccessFWI"></include>
+		<include refid="pagination_clause_foot"></include>
+	</select>
+	<select id="selectUserBidSuccessCount" resultType="int">
+		select count(*)
+		<include refid="selectUserBidSuccessFWI"></include>
+	</select>
+	
+	<select id="selectByPrimaryKey" parameterType="java.lang.Long" 
+		resultType="pojo.Vehicle">
+		select id_veh, brand, brand_model, start_price, curr_price
+		from mp_veh
+		where id_veh = #{id_veh,jdbcType=DECIMAL}
+	</select>	
+		
+	<select id="selectLowest_price" resultType="java.lang.Long">
+		select min(start_price) from mp_veh
+	</select>
+	
+	<select id="selectHighest_price" resultType="java.lang.Long">
+		select max(curr_price) from mp_veh
+	</select>
+	
+	<select id="selectCurr_price" parameterType="java.lang.Long" 
+		resultType="java.lang.Long">
+		select curr_price from mp_veh
+		where id_veh = #{id_veh}
+	</select>
+		
+	<select id="select" resultType="int">
+		select count(*) from mp_bid
+		where id_user = #{id_user}
+		and id_veh = #{id_veh}
+	</select>
+	
+ 	<!-- 确保用户竞拍的车辆未过期 -->
+	<sql id="isInBidding">
+		where exists
+		(select 1 from mp_veh
+		where id_veh = #{id_veh}
+		and sysdate &lt; expir_bid_time)
+	</sql>
+	
+	<insert id="insert">
+		insert into mp_bid(id_user,id_veh,bid_price)
+		select #{id_user},#{id_veh},#{bid_price} from mp_veh
+		where id_veh = #{id_veh}
+		and sysdate &lt; expir_bid_time
+	</insert>
+	
+	<update id="update">
+		update mp_bid
+		set bid_price = #{bid_price},
+			bid_stamp = sysdate
+		<include refid="isInBidding"></include>
+		and id_user = #{id_user}
+		and id_veh = #{id_veh}
+	</update>
+	
+	<update id="follow">
+		update mp_user 
+		set follow = concat(follow,#{id_veh}||' ')
+		where id_user = #{id_user}
+	</update>
+	
+	<update id="unfollow">
+		update mp_user 
+		set follow=replace(follow,#{id_veh}||' ','')
+		where id_user = #{id_user}
+	</update>
+</mapper>

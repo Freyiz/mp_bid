@@ -1,0 +1,405 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="dao.VehicleDao">
+	<!-- 返回车辆详细状态 -->
+	<sql id="selectVehStateDetailAsColumn">
+		case
+          when v.start_bid_time is null or v.expir_bid_time is null or
+               v.expir_pay_time is null or v.start_price is null or
+               v.curr_price is null then
+           '新入库'
+          when sysdate &lt; v.start_bid_time then
+           '预拍'
+          when sysdate &gt;= v.start_bid_time and
+               sysdate &lt; v.expir_bid_time then
+           '拍卖中'
+          when sysdate &gt;= v.expir_bid_time and
+               v.curr_price = v.start_price and v.veh_state = 0 then
+           '拍卖到期'
+          when sysdate &gt;= v.expir_bid_time and
+               sysdate &lt; v.expir_pay_time and
+               v.curr_price &gt; v.start_price and v.veh_state = 0 then
+           '待付款'
+          when sysdate &gt;= v.expir_pay_time and
+               v.curr_price &gt; v.start_price and v.veh_state = 0 then
+           '付款到期'
+          when sysdate &gt;= v.expir_bid_time and
+               v.curr_price &gt; v.start_price and v.veh_state = 1 then
+           '已付款'
+          when sysdate &gt;= v.expir_bid_time and
+               v.curr_price &gt; v.start_price and v.veh_state = 2 then
+           '已交车'
+          else
+           '未知'
+        end veh_state_detail
+	</sql>
+	
+	<!-- 选择指定字段 -->
+	<sql id="selectColumn">
+		select v.*,
+		<include refid="selectVehStateDetailAsColumn"></include>
+	</sql>
+
+	<sql id="from_where">
+		from mp_veh v where 1=1
+	</sql>
+
+	<!-- 精确匹配或模糊匹配if从句 -->
+	<sql id="if_clause_choose">
+		<choose>
+			<when test="mode == 'precise'">
+				<if test="param.id_veh != null and param.id_veh != ''">
+					and v.id_veh = #{param.id_veh,jdbcType=DECIMAL}
+				</if>
+				<if test="param.batch_num != null and param.batch_num != ''">
+					and v.batch_num = #{param.batch_num,jdbcType=VARCHAR}
+				</if>
+				<if test="param.license_num != null and param.license_num != ''">
+					and v.license_num = #{param.license_num,jdbcType=VARCHAR}
+				</if>
+				<if test="param.veh_id_num != null and param.veh_id_num != ''">
+					and v.veh_id_num = #{param.veh_id_num,jdbcType=VARCHAR}
+				</if>
+				<if test="param.engine_num != null and param.engine_num != ''">
+					and v.engine_num = #{param.engine_num,jdbcType=VARCHAR}
+				</if>
+				<if test="param.brand != null and param.brand != ''">
+					and v.brand = #{param.brand,jdbcType=OTHER}
+				</if>
+				<if test="param.brand_model != null and param.brand_model != ''">
+					and v.brand_model = #{param.brand_model,jdbcType=OTHER}
+				</if>
+			</when>
+			<otherwise>
+				<if test="param.id_veh != null and param.id_veh != ''">
+					and v.id_veh like
+					'%'||#{param.id_veh,jdbcType=DECIMAL}||'%'
+				</if>
+				<if test="param.batch_num != null and param.batch_num != ''">
+					and v.batch_num like
+					'%'||#{param.batch_num,jdbcType=VARCHAR}||'%'
+				</if>
+				<if test="param.license_num != null and param.license_num != ''">
+					and v.license_num like
+					'%'||#{param.license_num,jdbcType=VARCHAR}||'%'
+				</if>
+				<if test="param.veh_id_num != null and param.veh_id_num != ''">
+					and v.veh_id_num like
+					'%'||#{param.veh_id_num,jdbcType=VARCHAR}||'%'
+				</if>
+				<if test="param.engine_num != null and param.engine_num != ''">
+					and v.engine_num like
+					'%'||#{param.engine_num,jdbcType=VARCHAR}||'%'
+				</if>
+				<if test="param.brand != null and param.brand != ''">
+					and v.brand like '%'||#{param.brand,jdbcType=OTHER}||'%'
+				</if>
+				<if test="param.brand_model != null and param.brand_model != ''">
+					and v.brand_model like
+					'%'||#{param.brand_model,jdbcType=OTHER}||'%'
+				</if>
+			</otherwise>
+		</choose>
+	</sql>
+	
+	<!--根据车辆状态查询 -->
+	<sql id="selectByVehStateDetail">
+		<choose>
+			<when test="param.veh_state_detail == '新入库'">
+				and v.start_bid_time is null or v.expir_bid_time is null 
+				or v.expir_pay_time is null or v.start_price is null 
+				or v.curr_price is null
+			</when>
+			<when test="param.veh_state_detail == '预拍'">
+				and sysdate &lt; v.start_bid_time
+			</when>
+			<when test="param.veh_state_detail == '拍卖中'">
+				and sysdate &gt;= v.start_bid_time 
+				and sysdate &lt; v.expir_bid_time
+			</when>
+			<when test="param.veh_state_detail == '拍卖到期'">
+				and sysdate &gt;= v.expir_bid_time 
+				and v.curr_price = v.start_price 
+               	and v.veh_state = 0
+			</when>
+			<when test="param.veh_state_detail == '待付款'">
+				and sysdate &gt;= v.expir_bid_time 
+				and sysdate &lt; v.expir_pay_time 
+				and v.curr_price &gt; v.start_price 
+				and v.veh_state = 0
+			</when>
+			<when test="param.veh_state_detail == '付款到期'">
+				and sysdate &gt;= v.expir_pay_time 
+				and v.curr_price &gt; v.start_price 
+				and v.veh_state = 0
+			</when>
+			<when test="param.veh_state_detail == '已付款'">
+				and sysdate &gt;= v.expir_bid_time 
+				and v.curr_price &gt; v.start_price 
+                and v.veh_state = 1
+			</when>
+			<when test="param.veh_state_detail == '已交车'">
+				and sysdate &gt;= v.expir_bid_time 
+				and v.curr_price &gt; v.start_price 
+                and v.veh_state = 2
+			</when>
+		</choose>
+	</sql>
+	
+	<!-- 通用if从句 -->
+	<!-- 此处的start_price和curr_price为筛选条件，表示现价最低价和现价最高价 -->
+	<sql id="if_clause_common">
+		<if test="param.start_price != null and param.start_price != ''">
+			and v.curr_price &gt;=
+			#{param.start_price,jdbcType=DECIMAL}
+		</if>
+		<if test="param.curr_price != null and param.curr_price != ''">
+			and v.curr_price &lt;=
+			#{param.curr_price,jdbcType=DECIMAL}
+		</if>
+		<if test="param.veh_state_detail != null">
+			<include refid="selectByVehStateDetail"></include>
+		</if>
+	</sql>
+
+	<sql id="if_clause">
+		<include refid="if_clause_choose"></include>
+		<include refid="if_clause_common"></include>
+	</sql>
+
+	<sql id="pagination_clause_head">
+		select b.r row_num, b.*, b.veh_state_detail from
+		(select a.*,rownum r from (
+	</sql>
+
+	<sql id="pagination_clause_foot">
+		) a) b
+		where b.r &gt;= #{start}
+		and b.r &lt;= #{end}
+	</sql>
+
+	<!-- 查询所有车辆 -->
+	<select id="selectVehicle" resultType="pojo.Vehicle">
+		<include refid="pagination_clause_head"></include>
+		<include refid="selectColumn"></include>
+		<include refid="from_where"></include>
+		<include refid="if_clause"></include>
+		<include refid="pagination_clause_foot"></include>
+	</select>
+	<select id="selectVehicleCount" resultType="int">
+		select count(*)
+		<include refid="from_where"></include>
+		<include refid="if_clause"></include>
+	</select>
+	
+	<!-- 将单个车辆加入拍卖 -->
+	<update id="startBidById" parameterType="pojo.StartBidConfig">
+		update mp_veh 
+		<set>
+			start_price = #{start_price},
+			curr_price = #{start_price},
+			<if test="delay != null">
+				start_bid_time = #{start_bid_time},
+				expir_bid_time = #{start_bid_time} + #{bidDuration},
+				expir_pay_time = #{start_bid_time} + #{bidDuration} + #{payDuration},
+			</if>
+			<if test="delay == null">
+				start_bid_time = sysdate,
+				expir_bid_time = sysdate + #{bidDuration},
+				expir_pay_time = sysdate + #{bidDuration} + #{payDuration},
+			</if>
+		</set>
+		where
+		<if test="id_veh != null">
+			id_veh = #{id_veh}
+		</if>
+		<if test="batch_num != null">
+			batch_num = #{batch_num} and (start_bid_time is null 
+			or expir_bid_time is null or expir_pay_time is null 
+			or start_price is null or curr_price is null)
+		</if>
+	</update>
+	
+	<!-- 取消拍卖 -->
+	<update id="cancelBidById" parameterType="java.lang.Long">
+		update mp_veh 
+		set start_price = null, curr_price = null, start_bid_time = null, 
+			expir_bid_time = null, expir_pay_time = null
+		where id_veh = #{id_veh}
+	</update>
+	
+	<!-- 根据车辆ID查询中标用户信息 -->
+	<select id="selectUserBidSuccessByVId" parameterType="java.lang.Long" 
+		resultType="pojo.User">
+		select u.id_user,u.username
+		from mp_user u, mp_veh v,mp_bid b
+		where v.id_veh = #{id_veh}
+		and b.id_veh = #{id_veh}
+		and b.id_user = u.id_user
+		and b.bid_price = v.curr_price
+	</select>
+	
+	<insert id="insertSelective" parameterType="pojo.Vehicle">
+		insert into mp_veh
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="batch_num != null and batch_num != ''">
+				batch_num,
+			</if>
+			<if test="license_num != null and license_num != ''">
+				license_num,
+			</if>
+			<if test="veh_id_num != null and veh_id_num != ''">
+				veh_id_num,
+			</if>
+			<if test="engine_num != null and engine_num != ''">
+				engine_num,
+			</if>
+			<if test="brand != null and brand != ''">
+				brand,
+			</if>
+			<if test="brand_model != null and brand_model != ''">
+				brand_model,
+			</if>
+			<if test="intro != null and intro != ''">
+				intro,
+			</if>
+			<if test="start_bid_time != null and start_bid_time != ''">
+				start_bid_time,
+			</if>
+			<if test="expir_bid_time != null and expir_bid_time != ''">
+				expir_bid_time,
+			</if>
+			<if test="expir_pay_time != null and expir_pay_time != ''">
+				expir_pay_time,
+			</if>
+			<if test="start_price != null and start_price != ''">
+				<!-- 将起拍价设为当前价 -->
+				start_price,
+				curr_price,
+			</if>
+			<if test="remark != null and remark != ''">
+				remark,
+			</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="batch_num != null and batch_num != ''">
+				#{batch_num,jdbcType=VARCHAR},
+			</if>
+			<if test="license_num != null and license_num != ''">
+				#{license_num,jdbcType=VARCHAR},
+			</if>
+			<if test="veh_id_num != null and veh_id_num != ''">
+				#{veh_id_num,jdbcType=VARCHAR},
+			</if>
+			<if test="engine_num != null and engine_num != ''">
+				#{engine_num,jdbcType=VARCHAR},
+			</if>
+			<if test="brand != null and brand != ''">
+				#{brand,jdbcType=OTHER},
+			</if>
+			<if test="brand_model != null and brand_model != ''">
+				#{brand_model,jdbcType=OTHER},
+			</if>
+			<if test="intro != null and intro != ''">
+				#{intro,jdbcType=OTHER},
+			</if>
+			<if test="start_bid_time != null and start_bid_time != ''">
+				#{start_bid_time,jdbcType=TIMESTAMP},
+			</if>
+			<if test="expir_bid_time != null and expir_bid_time != ''">
+				#{expir_bid_time,jdbcType=TIMESTAMP},
+			</if>
+			<if test="expir_pay_time != null and expir_pay_time != ''">
+				#{expir_pay_time,jdbcType=TIMESTAMP},
+			</if>
+			<if test="start_price != null and start_price != ''">
+				<!-- 将起拍价设为当前价 -->
+				#{start_price,jdbcType=DECIMAL},
+				#{start_price,jdbcType=DECIMAL},
+			</if>
+			<if test="remark != null and remark != ''">
+				#{remark,jdbcType=OTHER},
+			</if>
+		</trim>
+	</insert>
+
+	<delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
+		delete from mp_veh
+		where id_veh = #{id_veh,jdbcType=DECIMAL}
+	</delete>
+
+	<select id="selectByPrimaryKey" parameterType="java.lang.Long"
+		resultType="pojo.Vehicle">
+		select v.*,
+		<include refid="selectVehStateDetailAsColumn"></include>
+		from mp_veh v
+		where v.id_veh = #{id_veh,jdbcType=DECIMAL}
+	</select>
+
+	<update id="updateSelective" parameterType="pojo.Vehicle">
+		update mp_veh
+		<set>
+			<if test="batch_num != null and batch_num != ''">
+				batch_num = #{batch_num,jdbcType=VARCHAR},
+			</if>
+			<if test="license_num != null and license_num != ''">
+				license_num = #{license_num,jdbcType=VARCHAR},
+			</if>
+			<if test="veh_id_num != null and veh_id_num != ''">
+				veh_id_num = #{veh_id_num,jdbcType=VARCHAR},
+			</if>
+			<if test="engine_num != null and engine_num != ''">
+				engine_num = #{engine_num,jdbcType=VARCHAR},
+			</if>
+			<if test="brand != null and brand != ''">
+				brand = #{brand,jdbcType=OTHER},
+			</if>
+			<if test="brand_model != null and brand_model != ''">
+				brand_model = #{brand_model,jdbcType=OTHER},
+			</if>
+			<if test="intro != null and intro != ''">
+				intro = #{intro,jdbcType=OTHER},
+			</if>
+			<if test="start_bid_time != null and start_bid_time != ''">
+				start_bid_time = #{start_bid_time,jdbcType=TIMESTAMP},
+			</if>
+			<if test="expir_bid_time != null and expir_bid_time != ''">
+				expir_bid_time = #{expir_bid_time,jdbcType=TIMESTAMP},
+			</if>
+			<if test="expir_pay_time != null and expir_pay_time != ''">
+				expir_pay_time = #{expir_pay_time,jdbcType=TIMESTAMP},
+			</if>
+			<if test="start_price != null and start_price != ''">
+				<!--将起拍价设为当前价 -->
+				start_price = #{start_price,jdbcType=DECIMAL},
+				curr_price = #{start_price,jdbcType=DECIMAL},
+			</if>
+			<if test="remark != null and remark != ''">
+				remark = #{remark,jdbcType=OTHER},
+			</if>
+			<if test="veh_state != null">
+				veh_state = #{veh_state,jdbcType=DECIMAL},
+			</if>
+		</set>
+		where id_veh = #{id_veh,jdbcType=DECIMAL}
+	</update>
+	
+
+	
+	
+	<select id="selectBatchInfo" parameterType="pojo.Vehicle"
+		resultType="pojo.Vehicle">
+		select batch_num,count(veh_state_zh) newveh_count 
+  		from (select batch_num,start_bid_time,(case
+                 when start_bid_time is null then
+                  '新入库'
+               end) veh_state_zh
+          from mp_veh
+         where 1=1 <if test="batch_num != null and batch_num != ''">
+			and batch_num =#{batch_num}
+		</if>
+			)group by batch_num
+	
+	</select>
+	
+</mapper>

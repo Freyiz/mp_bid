@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="dao.VehicleImgDao">
+	<select id="selectByForeignKey" parameterType="java.lang.Long"
+		resultType="pojo.VehicleImg">
+		select * from mp_veh_img
+		where id_veh = #{id_veh,jdbcType=DECIMAL}
+	</select>
+
+	<update id="updateSelective" parameterType="pojo.VehicleImg">
+		update mp_veh_img
+		<set>
+			<if test="img0 != null and img0 != ''">
+				img0 = #{img0,jdbcType=BLOB},
+			</if>
+			<if test="img1 != null and img1 != ''">
+				img1 = #{img1,jdbcType=BLOB},
+			</if>
+			<if test="img2 != null and img2 != ''">
+				img2 = #{img2,jdbcType=BLOB},
+			</if>
+			<if test="img3 != null and img3 != ''">
+				img3 = #{img3,jdbcType=BLOB},
+			</if>
+			<if test="img4 != null and img4 != ''">
+				img4 = #{img4,jdbcType=BLOB},
+			</if>
+			<if test="img5 != null and img5 != ''">
+				img5 = #{img5,jdbcType=BLOB},
+			</if>
+		</set>
+		where id_veh = #{id_veh,jdbcType=DECIMAL}
+	</update>
+
+	<update id="setNullByImgIndex">
+		update mp_veh_img
+		<set>
+			<if test="imgIndex == 'img0'">
+				img0 = null,
+			</if>
+			<if test="imgIndex == 'img1'">
+				img1 = null,
+			</if>
+			<if test="imgIndex == 'img2'">
+				img2 = null,
+			</if>
+			<if test="imgIndex == 'img3'">
+				img3 = null,
+			</if>
+			<if test="imgIndex == 'img4'">
+				img4 = null,
+			</if>
+			<if test="imgIndex == 'img5'">
+				img5 = null,
+			</if>
+		</set>
+		where id_veh = #{id_veh,jdbcType=DECIMAL}
+	</update>
+</mapper>
