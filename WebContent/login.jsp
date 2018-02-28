@@ -40,7 +40,7 @@ button {
 		<div class="layui-form-item">
 			<label class="layui-form-label">密码</label>
 			<div class="layui-input-inline">
-				<input type="password" name="password" placeholder="请输入密码"
+				<input type="password" name="password" placeholder="请输入密码" value="asd"
 					 class="layui-input">
 			</div>
 		</div>
@@ -50,8 +50,6 @@ button {
 			</div>
 		</div>
 	</form>
-				<button class="layui-btn test-open">open</button>
-				<button class="layui-btn test-msg">msg</button>
 </body>
 <script>
 	layui.use('form', function() {
@@ -72,43 +70,20 @@ button {
 			return false;
 		});
  		// 自动登录，测试用
-// 		$(function() {
-// 			$.ajax({
-// 				type : "post",
-// 				url : "user/login.do",
-// 				data : $("form").serialize(),
-// 				success : function(data) {
-// 					if (data != "") {
-// 						layer.msg(data);
-// 					} else {
-// 						window.location.href = "index.do";
-// 					}
-// 				}
-// 			});
-// 		});
-	});
-	
-	var myLayer = {
-			open: function(a){
-				console.log(a);
-			},
-			msg:function(msg){
-				var elem = "<div class='myLayer-shadow'><div class='myLayer-msg'>"+msg+"</div></div>";
-				$("body").append(elem);
-				setTimeout("close()",3000);
-			}
-	};
-	function close(){
-		var elem = $("[class^=myLayer]");
-		$("body").remove(elem);
-	};
-	$(".test-open").click(function() {
-		myLayer.open();
-		return false;
-	});
-	$(".test-msg").click(function() {
-		myLayer.msg('dwwd');
-		return false;
+		$(function() {
+			$.ajax({
+				type : "post",
+				url : "user/login.do",
+				data : $("form").serialize(),
+				success : function(data) {
+					if (data != "") {
+						layer.msg(data);
+					} else {
+						window.location.href = "index.do";
+					}
+				}
+ 			});
+ 		});
 	});
 </script>
 </html>
