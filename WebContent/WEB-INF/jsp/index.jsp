@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="/Project09/resources/css/index.css">
 <title>明拍</title>
 <style>
+.user>a,
 .selectVehicle>a{
 	border-top: 1px solid gray;
 }
